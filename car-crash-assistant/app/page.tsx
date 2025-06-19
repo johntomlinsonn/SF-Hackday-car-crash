@@ -1,75 +1,97 @@
-import Header from "@/components/header";
-import Footer from "@/components/footer";
-import VoiceAiAgent from "@/components/voice-ai-agent";
+import Header from "@/components/header"
+import Footer from "@/components/footer"
+import ChatButton from "@/components/chat-button" // Keeping the floating chat button for now
+import Link from "next/link"
+import VoiceAiAgent from "@/components/voice-ai-agent" // Import the new voice agent
 
 export default function Home() {
   return (
-    <div className="min-h-screen flex flex-col bg-[#F7F7F7]">
-      {/* State Farm style header */}
+    <div className="flex flex-col min-h-screen bg-white">
       <Header />
-      <main className="flex flex-col items-center flex-1 w-full px-4 py-8 max-w-3xl mx-auto">
-        <h1 className="text-3xl sm:text-4xl font-extrabold text-[#E41B23] mb-6 text-center">How to handle an auto accident</h1>
-        <div className="space-y-8 w-full">
-          {/* Step 1 */}
-          <section className="bg-white rounded-xl shadow p-6 border-l-8 border-[#E41B23]">
-            <h2 className="text-xl font-bold text-[#E41B23] mb-2">1. Safety first</h2>
-            <ul className="list-disc pl-6 text-gray-800 space-y-1">
-              <li>If the car accident is minor, <b>move vehicles out of traffic</b> to a safe place.</li>
-              <li>Shift into park, <b>turn off your vehicle</b>, and turn on the hazard lights.</li>
-              <li>Use cones, warning triangles, or flares for <b>added safety</b>, if you have them.</li>
-            </ul>
-          </section>
-          {/* Step 2 */}
-          <section className="bg-white rounded-xl shadow p-6 border-l-8 border-[#E41B23]">
-            <h2 className="text-xl font-bold text-[#E41B23] mb-2">2. Get help</h2>
-            <ul className="list-disc pl-6 text-gray-800 space-y-1">
-              <li><b>Check for injuries</b>; call an ambulance when in doubt.</li>
-              <li><b>Call the police</b>, even if the accident is minor. A police report can be invaluable to the claim process and help establish who's at fault.</li>
-            </ul>
-          </section>
-          {/* Step 3 */}
-          <section className="bg-white rounded-xl shadow p-6 border-l-8 border-[#E41B23]">
-            <h2 className="text-xl font-bold text-[#E41B23] mb-2">3. Collect information</h2>
-            <ul className="list-disc pl-6 text-gray-800 space-y-1">
-              <li><b>Gather information</b> from others involved in the accident:
-                <ul className="list-disc pl-6">
-                  <li>Drivers and passengers: names and contact information.</li>
-                  <li>Vehicle descriptions (make, model, year).</li>
-                  <li>Driver's license numbers - License plate numbers.</li>
-                  <li>Insurance companies and policy numbers.</li>
-                  <li>Eyewitnesses: names and contact information.</li>
-                  <li>Accident scene location and/or address.</li>
-                  <li>Police officer's name and badge number.</li>
-                </ul>
-              </li>
-              <li><b>Take photos</b> of all vehicles involved and the accident scene, if it is safe to do so.</li>
-              <li><b>Do not sign</b> any document unless it's for the police or your insurance agent.</li>
-              <li>Be polite, but <b>don't tell anyone the accident was your fault</b>, even if you think it was.</li>
-            </ul>
-          </section>
-          {/* Step 4 */}
-          <section className="bg-white rounded-xl shadow p-6 border-l-8 border-[#E41B23]">
-            <h2 className="text-xl font-bold text-[#E41B23] mb-2">4. File a claim</h2>
-            <ul className="list-disc pl-6 text-gray-800 space-y-1">
-              <li>You can start the claim process immediately at the scene and add details when things are calmer.</li>
-              <li>File a claim online, use our easy State Farm® mobile app, or call us at <b>800-SF-CLAIM (1-800-732-5246)</b>.</li>
-              <li>Notify your insurance agent as soon as possible.</li>
-            </ul>
-          </section>
-          {/* Step 5 */}
-          <section className="bg-white rounded-xl shadow p-6 border-l-8 border-[#E41B23]">
-            <h2 className="text-xl font-bold text-[#E41B23] mb-2">5. Get roadside assistance</h2>
-            <ul className="list-disc pl-6 text-gray-800 space-y-1">
-              <li>If your vehicle isn't drivable after an accident, learn about roadside assistance and request roadside service from State Farm.</li>
-            </ul>
-          </section>
-        </div>
-        {/* AI Voice Agent Section */}
-        <div className="w-full mt-12">
+      <main className="flex-1 container mx-auto px-4 py-8 md:py-12">
+        {/* Breadcrumbs */}
+        <nav className="text-sm text-gray-600 mb-6">
+          <Link href="#" className="hover:underline">
+            Claims
+          </Link>
+          <span className="mx-2">&gt;</span>
+          <Link href="#" className="hover:underline">
+            Auto
+          </Link>
+          <span className="mx-2">&gt;</span>
+          <span>How To Handle An Accident</span>
+        </nav>
+
+        {/* New Voice AI Agent Section - Made prominent */}
+        <section className="mb-12">
           <VoiceAiAgent />
-        </div>
+        </section>
+
+        {/* Main Content Section (moved below AI agent) */}
+        <section className="max-w-3xl mx-auto">
+          <h1 className="text-4xl md:text-5xl font-bold text-gray-800 mb-4 leading-tight">
+            How to handle an auto accident
+          </h1>
+          <p className="text-lg text-gray-700 mb-12">
+            Having an auto accident or dealing with a catastrophe is stressful, yet it's important to try to stay calm
+            and focused.
+          </p>
+
+          <h2 className="text-3xl md:text-4xl font-bold text-gray-800 mb-8">What do I do after an accident?</h2>
+
+          <div className="space-y-8">
+            {/* Step 1 */}
+            <div>
+              <h3 className="text-2xl font-bold text-gray-800 mb-4">1. Safety first</h3>
+              <ul className="list-disc list-inside text-gray-700 space-y-2 pl-4">
+                <li>
+                  If the car accident is minor, <span className="font-bold">move vehicles out of traffic</span> to a
+                  safe place.
+                </li>
+                <li>
+                  Shift into park, <span className="font-bold">turn off your vehicle</span>, and turn on the hazard
+                  lights.
+                </li>
+                <li>
+                  Use cones, warning triangles, or flares for <span className="font-bold">added safety</span>, if you
+                  have them.
+                </li>
+              </ul>
+            </div>
+
+            {/* Step 2 (placeholder as content not fully visible) */}
+            <div>
+              <h3 className="text-2xl font-bold text-gray-800 mb-4">2. Get help</h3>
+              <ul className="list-disc list-inside text-gray-700 space-y-2 pl-4">
+                <li>Call 911 if anyone is injured or if there is significant damage.</li>
+                <li>Exchange information with the other driver(s): name, contact, insurance, license plate.</li>
+                <li>Gather witness contact information if available.</li>
+              </ul>
+            </div>
+
+            {/* Additional steps can be added here following the pattern */}
+            <div>
+              <h3 className="text-2xl font-bold text-gray-800 mb-4">3. Document the scene</h3>
+              <ul className="list-disc list-inside text-gray-700 space-y-2 pl-4">
+                <li>Take photos of all vehicles involved, damage, road conditions, and any relevant surroundings.</li>
+                <li>Note the date, time, and location of the accident.</li>
+                <li>Write down a detailed account of what happened while it's fresh in your mind.</li>
+              </ul>
+            </div>
+
+            <div>
+              <h3 className="text-2xl font-bold text-gray-800 mb-4">4. Report the claim</h3>
+              <ul className="list-disc list-inside text-gray-700 space-y-2 pl-4">
+                <li>Contact State Farm as soon as possible to report the accident.</li>
+                <li>You can report a claim online, through the mobile app, or by calling your agent.</li>
+                <li>Provide all gathered information and documentation to your claims representative.</li>
+              </ul>
+            </div>
+          </div>
+        </section>
       </main>
+      <ChatButton />
       <Footer />
     </div>
-  );
+  )
 }
