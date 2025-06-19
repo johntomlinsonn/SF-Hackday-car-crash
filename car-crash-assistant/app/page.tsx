@@ -2,10 +2,14 @@ import Header from "@/components/header"
 import Footer from "@/components/footer"
 import ChatButton from "@/components/chat-button" // Keeping the floating chat button for now
 import Link from "next/link"
-import VoiceAiAgent from "@/components/voice-ai-agent" // Import the new voice agent
+import VoiceAiAgent from "@/components/voice-ai-agent"
+import { Conversation } from "@/components/conversation" 
 
 export default function Home() {
   return (
+    
+      
+
     <div className="flex flex-col min-h-screen bg-white">
       <Header />
       <main className="flex-1 container mx-auto px-4 py-8 md:py-12">
@@ -22,13 +26,15 @@ export default function Home() {
           <span>How To Handle An Accident</span>
         </nav>
 
-        {/* New Voice AI Agent Section - Made prominent */}
-        <section className="mb-12">
-          <VoiceAiAgent />
-        </section>
 
         {/* Main Content Section (moved below AI agent) */}
         <section className="max-w-3xl mx-auto">
+        <div className="z-10 max-w-5xl w-full items-center justify-between font-mono text-sm">
+        <h1 className="text-4xl font-bold mb-8 text-center">
+          ElevenLabs Conversational AI
+        </h1>
+        <Conversation />
+      </div>
           <h1 className="text-4xl md:text-5xl font-bold text-gray-800 mb-4 leading-tight">
             How to handle an auto accident
           </h1>
