@@ -1,40 +1,66 @@
 import Link from "next/link"
+import Image from "next/image"
+import { Search, HelpCircle, Globe } from "lucide-react"
+import { Button } from "@/components/ui/button"
 
 export default function Header() {
   return (
-    <header className="w-full">
+    <header className="w-full bg-white border-b">
       {/* Top utility bar */}
-      <div className="w-full bg-[#f5f5f5] text-sm text-gray-700 flex justify-end items-center h-8 px-6">
-        <nav className="flex space-x-6">
-          <Link href="#" className="hover:underline">Search</Link>
-          <Link href="#" className="hover:underline">Help</Link>
-          <Link href="#" className="hover:underline">Español</Link>
+      <div className="flex justify-end items-center h-10 px-4 md:px-6 text-sm text-gray-600 border-b">
+        <nav className="flex space-x-4">
+          <Link href="#" className="hover:underline flex items-center gap-1">
+            <Search className="h-4 w-4" />
+            Search
+          </Link>
+          <Link href="#" className="hover:underline flex items-center gap-1">
+            <HelpCircle className="h-4 w-4" />
+            Help
+          </Link>
+          <Link href="#" className="hover:underline flex items-center gap-1">
+            <Globe className="h-4 w-4" />
+            Español
+          </Link>
         </nav>
       </div>
-      {/* Main header */}
-      <div className="w-full flex items-center justify-between h-16 px-8 border-b border-gray-200">
-        {/* Logo left */}
-        <div className="flex-none flex items-center">
-          <Link href="#" className="flex items-center">
-            <img className="-oneX-header-logo" id="oneX-sf-logo" src="https://static1.st8fm.com/en_US/dxl-1x/prod/css/images/header/state-farm-logo-4.svg" alt="State Farm Insurance and Financial Services" style={{ height: '32px', width: 'auto' }} />
+
+      {/* Main navigation */}
+      <div className="flex items-center justify-between h-16 px-4 md:px-6">
+        <div className="flex items-center space-x-8">
+          <Link href="/" className="flex items-center">
+            <Image
+              src="https://static1.st8fm.com/en_US/dxl-1x/prod/css/images/header/state-farm-logo-4.svg"
+              alt="State Farm Logo"
+              width={160}
+              height={32}
+              className="h-8 w-auto"
+            />
           </Link>
+          <nav className="hidden md:flex space-x-6 text-sm font-medium">
+            <Link href="#" className="hover:text-[#E41B23]">
+              Insurance
+            </Link>
+            <Link href="#" className="hover:text-[#E41B23]">
+              Banking
+            </Link>
+            <Link href="#" className="hover:text-[#E41B23]">
+              Investments
+            </Link>
+            <Link href="#" className="hover:text-[#E41B23]">
+              Claims
+            </Link>
+            <Link href="#" className="hover:text-[#E41B23]">
+              Get a Quote
+            </Link>
+            <Link href="#" className="hover:text-[#E41B23]">
+              Pay a Bill
+            </Link>
+            <Link href="#" className="hover:text-[#E41B23]">
+              Find an Agent
+            </Link>
+          </nav>
         </div>
-        {/* Nav center */}
-        <nav className="flex-auto flex justify-center overflow-x-auto">
-          <ul className="flex space-x-8 font-semibold text-base text-black whitespace-nowrap">
-            <li><Link href="#" className="hover:underline">Insurance</Link></li>
-            <li><Link href="#" className="hover:underline">Banking</Link></li>
-            <li><Link href="#" className="hover:underline">Investments</Link></li>
-            <li><Link href="#" className="hover:underline">Claims</Link></li>
-            <li><Link href="#" className="hover:underline">Get a Quote</Link></li>
-            <li><Link href="#" className="hover:underline">Pay a Bill</Link></li>
-            <li><Link href="#" className="hover:underline">Find an Agent</Link></li>
-          </ul>
-        </nav>
-        {/* Log in right */}
-        <div className="flex-none flex justify-end">
-          <Link href="#" className="font-bold text-[#E41B23] hover:underline">Log in</Link>
-        </div>
+        <Button className="bg-[#E41B23] hover:bg-[#E41B23]/90 text-white px-6 py-2 rounded-md">Log in</Button>
       </div>
     </header>
   )

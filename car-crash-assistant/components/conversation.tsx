@@ -4,19 +4,32 @@ import { useConversation } from '@elevenlabs/react';
 import { useCallback, useRef, useState, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Mic, MicOff, Volume2, VolumeX } from 'lucide-react';
 import { ElevenLabsClient } from "@elevenlabs/elevenlabs-js";
 
-export function Conversation({ onConversationId }: { onConversationId?: (id: string | null) => void }) {
-  const [input, setInput] = useState('');
+export function Conversation({
+  onConversationId,
+  showHistory = true,
+}: {
+  onConversationId?: (id: string | null) => void;
+  showHistory?: boolean;
+}) {
   const [messages, setMessages] = useState<{ sender: 'user' | 'agent'; text: string }[]>([]);
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState<'idle' | 'connected' | 'disconnected' | 'error'>('idle');
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [liveUserTranscript, setLiveUserTranscript] = useState('');
   const [conversationId, setConversationId] = useState<string | null>(null);
+  const [speechEnabled, setSpeechEnabled] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
 
   // Fetch and log conversation details each time a message is received
   const fetchAndLogConversationDetails = async (id: string) => {
@@ -60,8 +73,8 @@ export function Conversation({ onConversationId }: { onConversationId?: (id: str
       setStatus('connected');
       const newId = conversation.getId();
       if (typeof newId === 'string') {
-        setConversationId(newId as string);
-        if (onConversationId) onConversationId(newId as string);
+        setConversationId(newId);
+        if (onConversationId) onConversationId(newId);
       }
     }
     catch {
@@ -75,25 +88,19 @@ export function Conversation({ onConversationId }: { onConversationId?: (id: str
     setStatus('disconnected');
     const endId = conversation.getId();
     if (typeof endId === 'string') {
-      setConversationId(endId as string);
-      if (onConversationId) onConversationId(endId as string);
+      setConversationId(endId);
+      if (onConversationId) onConversationId(endId);
     } else {
       setConversationId(null);
       if (onConversationId) onConversationId(null);
     }
   }, [conversation, onConversationId]);
 
-  const handleSend = async () => {
-    if (!input.trim()) return;
-    setMessages((prev) => [...prev, { sender: 'user', text: input }]);
-    setInput('');
-    if (conversation.status === 'connected') {
-      await conversation.send({ text: input });
+  const toggleSpeechOutput = () => {
+    if (window.speechSynthesis?.speaking) {
+      window.speechSynthesis.cancel();
     }
-  };
-
-  const handleInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') handleSend();
+    setSpeechEnabled((prev) => !prev);
   };
 
   useEffect(() => {
@@ -105,67 +112,92 @@ export function Conversation({ onConversationId }: { onConversationId?: (id: str
   }, [status, conversationId]);
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center p-4 font-montserrat font-sans">
-      <div className="mb-8 text-center">
-        <h1 className="text-3xl md:text-4xl font-bold mb-2">Just got in a Car crash?</h1>
-        <p className="text-lg text-gray-600">Talk to our AI car crash agent below</p>
-      </div>
-      <div className="flex flex-row items-center justify-center w-full max-w-3xl gap-8">
-        <div className="flex flex-row items-stretch w-full max-w-3xl">
-          <img
-            src="https://www.statefarm.com/content/dam/sf-library/en-us/secure/legacy/team-west/cl-table-oval.jpg"
-            alt="State Farm Agent"
-            className="h-full w-[360px] object-cover"
-            style={{ maxHeight: '800px' }}
-          />
-          <Card className="w-full max-w-sm rounded-xl shadow-lg overflow-hidden font-montserrat font-sans">
-            <CardHeader className="bg-[#E41B23] p-6 text-center font-montserrat font-sans">
-              <CardTitle className="text-2xl font-bold text-white font-montserrat font-sans">State Farm AI Voice Agent</CardTitle>
-            </CardHeader>
-            <CardContent className="p-6 space-y-6 flex flex-col items-center font-montserrat font-sans">
-              <div className="flex gap-4 w-full justify-center">
-                <Button
-                  className="flex-1 py-3 text-lg bg-[#E41B23] text-white hover:bg-[#c4161c] rounded-full shadow-md transition-all duration-200 ease-in-out font-montserrat font-sans"
-                  onClick={startConversation}
-                  disabled={status === 'connected' || loading}
-                >
-                  {loading && status !== 'connected' ? (
-                    <Loader2 className="h-6 w-6 animate-spin" />
-                  ) : (
-                    'Start Voice'
-                  )}
-                </Button>
-                <Button
-                  variant="outline"
-                  className="flex-1 py-3 text-lg bg-gray-100 text-gray-500 border-gray-200 hover:bg-gray-200 hover:text-gray-600 rounded-full shadow-sm transition-all duration-200 ease-in-out font-montserrat font-sans"
-                  onClick={stopConversation}
-                  disabled={status !== 'connected'}
-                >
-                  Stop
-                </Button>
+    <Card className="w-full max-w-4xl mx-auto mt-12 mb-8 shadow-lg border-2 border-[#E41B23]/20">
+      <CardHeader className="flex flex-row items-center justify-between pb-2 bg-[#E41B23] text-white">
+        <CardTitle className="text-3xl font-extrabold">State Farm Voice Assistant</CardTitle>
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={toggleSpeechOutput}
+          className="text-white hover:text-white/80"
+          aria-label={speechEnabled ? "Disable voice output" : "Enable voice output"}
+        >
+          {speechEnabled ? <Volume2 className="h-6 w-6" /> : <VolumeX className="h-6 w-6" />}
+        </Button>
+      </CardHeader>
+      <CardContent className="p-6">
+        {showHistory && (
+          <div className="h-96 overflow-y-auto border rounded-lg p-4 mb-4 bg-gray-50 shadow-inner">
+            {messages.length === 0 ? (
+              <div className="flex flex-col items-center justify-center h-full text-gray-500 text-center">
+                <Mic className="h-12 w-12 mb-4 text-[#E41B23]" />
+                <p className="text-lg">Tap the microphone to start talking about your car accident.</p>
+                <p className="text-sm mt-2">I can help you with safety steps, reporting claims, and more.</p>
               </div>
-              <p className="text-sm text-gray-600 mt-4 font-montserrat font-sans">
-                Status:{' '}
-                <span
-                  className={
-                    (status === 'connected'
-                      ? 'text-green-600'
-                      : status === 'error'
-                      ? 'text-red-600'
-                      : 'text-gray-600') + ' font-montserrat font-sans'
-                  }
-                >
-                  {status === 'connected'
-                    ? isSpeaking
-                      ? 'Speaking'
-                      : 'Listening'
-                    : status.charAt(0).toUpperCase() + status.slice(1)}
+            ) : (
+              messages.map((msg, index) => (
+                <div key={index} className={`mb-3 ${msg.sender === 'user' ? 'text-right' : 'text-left'}`}>
+                  <span
+                    className={`inline-block p-3 rounded-xl max-w-[80%] ${
+                      msg.sender === 'user'
+                        ? 'bg-[#E41B23] text-white rounded-br-none'
+                        : 'bg-gray-200 text-gray-800 rounded-bl-none'
+                    } shadow-sm`}
+                  >
+                    {msg.text}
+                  </span>
+                </div>
+              ))
+            )}
+            <div ref={messagesEndRef} />
+            {liveUserTranscript && (
+              <div className="text-right mb-3">
+                <span className="inline-block p-3 rounded-xl max-w-[80%] bg-gray-100 text-gray-600 rounded-br-none italic">
+                  {liveUserTranscript}
                 </span>
-              </p>
-            </CardContent>
-          </Card>
+              </div>
+            )}
+          </div>
+        )}
+        <div className="flex justify-center mt-6">
+          <Button
+            onClick={status === 'connected' ? stopConversation : startConversation}
+            disabled={loading || isSpeaking}
+            className={`w-24 h-24 rounded-full flex items-center justify-center text-white shadow-xl transition-all duration-300 ${
+              status === 'connected' ? 'bg-[#E41B23] animate-pulse' : 'bg-[#E41B23] hover:bg-[#E41B23]/90'
+            }`}
+            aria-label={status === 'connected' ? "Stop conversation" : "Start conversation"}
+          >
+            {loading ? (
+              <Loader2 className="h-10 w-10 animate-spin" />
+            ) : status === 'connected' ? (
+              <MicOff className="h-10 w-10" />
+            ) : (
+              <Mic className="h-10 w-10" />
+            )}
+          </Button>
         </div>
-      </div>
-    </div>
+        {loading && <p className="text-center text-gray-600 mt-4">Connecting...</p>}
+        {isSpeaking && <p className="text-center text-gray-600 mt-2">AI is speaking...</p>}
+        <p className="text-sm text-gray-600 mt-4 text-center">
+          Status:{' '}
+          <span
+            className={
+              status === 'connected'
+                ? 'text-green-600'
+                : status === 'error'
+                ? 'text-red-600'
+                : 'text-gray-600'
+            }
+          >
+            {status === 'connected'
+              ? isSpeaking
+                ? 'Speaking'
+                : 'Listening'
+              : status.charAt(0).toUpperCase() + status.slice(1)}
+          </span>
+        </p>
+      </CardContent>
+    </Card>
   );
 }
