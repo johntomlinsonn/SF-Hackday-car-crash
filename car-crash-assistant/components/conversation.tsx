@@ -6,13 +6,18 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Loader2, Mic, MicOff, Volume2, VolumeX } from 'lucide-react';
 import { ElevenLabsClient } from "@elevenlabs/elevenlabs-js";
+import { MockClaim } from "@/components/mock-claim";
+import Cerebras from '@cerebras/cerebras_cloud_sdk';
+import { useRouter } from 'next/navigation';
 
 export function Conversation({
   onConversationId,
   showHistory = true,
+  onStatusChange,
 }: {
   onConversationId?: (id: string | null) => void;
   showHistory?: boolean;
+  onStatusChange?: (status: 'idle' | 'connected' | 'disconnected' | 'error') => void;
 }) {
   const [messages, setMessages] = useState<{ sender: 'user' | 'agent'; text: string }[]>([]);
   const [loading, setLoading] = useState(false);
@@ -23,6 +28,18 @@ export function Conversation({
   const [speechEnabled, setSpeechEnabled] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
+  // Claim parsing state
+  const [parsedClaim, setParsedClaim] = useState<any>(null);
+  const [parsing, setParsing] = useState(false);
+  const [parseError, setParseError] = useState<string | null>(null);
+  const router = useRouter();
+
+  useEffect(() => {
+    if (onStatusChange) {
+      onStatusChange(status);
+    }
+  }, [status, onStatusChange]);
+
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
@@ -30,6 +47,12 @@ export function Conversation({
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      window.console.log('hello');
+    }
+  }, []);
 
   // Fetch and log conversation details each time a message is received
   const fetchAndLogConversationDetails = async (id: string) => {
@@ -40,6 +63,7 @@ export function Conversation({
       console.log('Full conversation details:', data);
       console.log('Transcript:', data.transcript);
       console.log('Status:', data.status);
+      return String(data.transcript);
     } catch (e) {
       console.error('Error fetching conversation details:', e);
     }
@@ -103,13 +127,105 @@ export function Conversation({
     setSpeechEnabled((prev) => !prev);
   };
 
+  // Parse claim after conversation ends
   useEffect(() => {
+    async function parseClaim(transcript: string) {
+      setParsing(true);
+      setParseError(null);
+      let content = null;
+      try {
+        const client = new Cerebras({
+          apiKey: process.env.NEXT_PUBLIC_CEREBRAS_API_KEY,
+        });
+        const prompt = `INSTRUCTIONS: You are an AI insurance assistant helping process car crash claims. Your task is to read the chat transcript at the end of this prompt and extract all relevant information to populate a structured JSON object. This JSON will be used to begin processing the claim.\n\nGuidelines:\n- Only include details that are explicitly stated or strongly implied.\n- If something is not mentioned, omit the field or set it to null if contextually appropriate.\n- Do not make up information.\n- Dates and times must follow ISO 8601 format (YYYY-MM-DDTHH:MM:SS).\n- Use proper U.S. English spelling and capitalization.\n- Output only the completed JSON—no extra commentary.\n\nJSON FORMAT:\n{\n  \"incident_details\": {\n    \"date_time\": \"ISO 8601 format (e.g., 2024-07-29T14:30:00)\",\n    \"location\": \"Street address, city, and country (if known)\",\n    \"description\": \"Brief natural language summary of the incident, including what happened and weather conditions\"\n  },\n  \"your_vehicle\": {\n    \"make_model\": \"Year Make Model\",\n    \"license_plate\": \"License plate number\"\n  },\n  \"other_parties_involved\": [\n    {\n      \"name\": \"Full name of other party\",\n      \"phone\": \"Phone number\",\n      \"insurance\": {\n        \"provider\": \"Insurance company name\",\n        \"policy_number\": \"Policy number\"\n      }\n    }\n  ],\n  \"injuries\": [\n    {\n      \"description\": \"Description of any injuries mentioned\",\n      \"severity\": \"minor | moderate | severe\"\n    }\n  ],\n  \"police_report\": {\n    \"filed\": true | false,\n    \"report_number\": \"Police report number (if available)\",\n    \"officer_name\": \"Name of the responding officer (if available)\"\n  }\n}\n"""${transcript}""":\n[Insert chat transcript here]`;
+        const completion = await client.chat.completions.create({
+          messages: [{ role: 'user', content: prompt }],
+          model: 'llama3.1-8b',
+        });
+        
+        const choices = (completion as any).choices;
+        content = choices && choices[0]?.message?.content;
+
+        if (!content) {
+          throw new Error("LLM response content is empty.");
+        }
+        console.log(content)
+
+        const jsonStart = content.indexOf('{');
+        const jsonEnd = content.lastIndexOf('}');
+        
+        if (jsonStart === -1 || jsonEnd === -1) {
+          throw new Error("No JSON object found in the response.");
+        }
+
+        const jsonString = content.substring(jsonStart, jsonEnd + 1);
+        const parsed = JSON.parse(jsonString);
+        console.log(parsed)
+        setParsedClaim(content);
+        
+        // Save to sessionStorage and navigate
+        sessionStorage.setItem('claimData', JSON.stringify(parsed));
+        router.push('/report-claim/summary');
+        
+      } catch (e: any) {
+        setParseError('Failed to parse claim from LLM.');
+        setParsedClaim(null);
+        console.error("LLM Parsing Error:", e.message);
+        if (content) {
+          console.error("Original LLM response:", content);
+        }
+      }
+      setParsing(false);
+    }
+
+    async function pollForTranscript(id: string, maxAttempts = 2, interval = 1000) {
+      const apiKey = String(process.env.NEXT_PUBLIC_ELEVENLABS_API_KEY);
+      const client = new ElevenLabsClient({ apiKey });
+      for (let attempt = 0; attempt < 1; attempt++) {
+        try {
+          const data = await client.conversationalAi.conversations.get(id);
+          console.log('Full conversation details:', data);
+          console.log('Transcript:', data.transcript);
+          console.log('Status:', data.status);
+          const transcriptText = (data.transcript || [])
+            .map((msg: any) => msg.message)
+            .filter(Boolean)
+            .join('\n');
+          if (transcriptText && transcriptText.trim().length > 0) {
+            if (typeof window !== 'undefined') {
+              window.console.log('Transcript: sho', transcriptText);
+            } else {
+              console.log('Transcript: ', transcriptText);
+            }
+            parseClaim(transcriptText);
+            return;
+          }
+        } catch (e) {
+          console.error('Error fetching conversation details:', e);
+        }
+        await new Promise((resolve) => setTimeout(resolve, interval));
+      }
+      setParseError('Transcript was not available after waiting.');
+    }
+
     if (status === 'disconnected' && conversationId) {
       setTimeout(() => {
-        fetchAndLogConversationDetails(conversationId);
+        pollForTranscript(conversationId);
       }, 2000);
     }
-  }, [status, conversationId]);
+  }, [status, conversationId, router]);
+
+  if (parsedClaim) {
+    return <MockClaim claimData={parsedClaim} />;
+  }
+
+  if (parsing) {
+    return <div className="text-xl text-gray-600 animate-pulse">Generating your claim summary...</div>;
+  }
+
+  if (parseError) {
+    return <div className="text-red-600">{parseError}</div>;
+  }
 
   return (
     <Card className="w-full max-w-4xl mx-auto mt-12 mb-8 shadow-lg border-2 border-[#E41B23]/20">
