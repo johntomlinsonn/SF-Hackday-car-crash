@@ -19,7 +19,7 @@ export function Conversation({
   showHistory?: boolean;
   onStatusChange?: (status: 'idle' | 'connected' | 'disconnected' | 'error') => void;
 }) {
-  const [messages, setMessages] = useState<{ sender: string; text: string }[]>([]);
+  const [messages, setMessages] = useState<{ sender: 'user' | 'agent'; text: string }[]>([]);
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState<'idle' | 'connected' | 'disconnected' | 'error'>('idle');
   const [isSpeaking, setIsSpeaking] = useState(false);
@@ -28,6 +28,12 @@ export function Conversation({
   const [speechEnabled, setSpeechEnabled] = useState(true);
   const [conversationSummary, setConversationSummary] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Claim parsing state
+  const [parsedClaim, setParsedClaim] = useState<any>(null);
+  const [parsing, setParsing] = useState(false);
+  const [parseError, setParseError] = useState<string | null>(null);
+  const router = useRouter();
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -60,10 +66,10 @@ export function Conversation({
   const conversation = useConversation({
     onConnect: () => setStatus('connected'),
     onDisconnect: () => setStatus('disconnected'),
-    onMessage: (props: { message: string; source: string }) => {
+    onMessage: (msg) => {
       // Map "ai" to "agent" for display
-      const sender = props.source === "ai" ? "agent" : props.source;
-      setMessages((prev) => [...prev, { sender, text: props.message }]);
+      const sender: 'user' | 'agent' = msg.source === 'ai' ? 'agent' : 'user';
+      setMessages((prev) => [...prev, { sender, text: msg.message || '' }]);
       setIsSpeaking(conversation.isSpeaking);
       setLiveUserTranscript('');
     },
@@ -123,7 +129,8 @@ export function Conversation({
         const client = new Cerebras({
           apiKey: process.env.NEXT_PUBLIC_CEREBRAS_API_KEY,
         });
-        const prompt = `INSTRUCTIONS: You are an AI insurance assistant helping process car crash claims. Your task is to read the chat transcript at the end of this prompt and extract all relevant information to populate a structured JSON object. This JSON will be used to begin processing the claim.\n\nGuidelines:\n- Only include details that are explicitly stated or strongly implied.\n- If something is not mentioned, omit the field or set it to null if contextually appropriate.\n- Do not make up information.\n- Dates and times must follow ISO 8601 format (YYYY-MM-DDTHH:MM:SS).\n- Use proper U.S. English spelling and capitalization.\n- Output only the completed JSON—no extra commentary.\n\nJSON FORMAT:\n{\n  \"incident_details\": {\n    \"date_time\": \"ISO 8601 format (e.g., 2024-07-29T14:30:00)\",\n    \"location\": \"Street address, city, and country (if known)\",\n    \"description\": \"Brief natural language summary of the incident, including what happened and weather conditions\"\n  },\n  \"your_vehicle\": {\n    \"make_model\": \"Year Make Model\",\n    \"license_plate\": \"License plate number\"\n  },\n  \"other_parties_involved\": [\n    {\n      \"name\": \"Full name of other party\",\n      \"phone\": \"Phone number\",\n      \"insurance\": {\n        \"provider\": \"Insurance company name\",\n        \"policy_number\": \"Policy number\"\n      }\n    }\n  ],\n  \"injuries\": [\n    {\n      \"description\": \"Description of any injuries mentioned\",\n      \"severity\": \"minor | moderate | severe\"\n    }\n  ],\n  \"police_report\": {\n    \"filed\": true | false,\n    \"report_number\": \"Police report number (if available)\",\n    \"officer_name\": \"Name of the responding officer (if available)\"\n  }\n}\n"""${transcript}""":\n[Insert chat transcript here]`;
+        const prompt = `"INSTRUCTIONS:\nYou are an AI insurance assistant helping process car crash claims. Your task is to read the chat transcript at the end of this prompt and extract all relevant information to populate a structured JSON object. This JSON will be used to begin processing the claim.\n\nGuidelines:\n- Only include details that are explicitly stated or strongly implied.\n- If something is not mentioned, omit the field or set it to null if contextually appropriate.\n- Do not make up information.\n- Dates and times must follow ISO 8601 format (YYYY-MM-DDTHH:MM:SS).\n- Use proper U.S. English spelling and capitalization.\n- Output only the completed JSON—no extra commentary.\n\nJSON FORMAT:\n{\n  \"incident_details\": {\n    \"date_time\": \"ISO 8601 format (e.g., 2024-07-29T14:30:00)\",\n    \"location\": \"Street address, city, and country (if known)\",\n    \"description\": \"Brief natural language summary of the incident, including what happened and weather conditions\"\n  },\n  \"your_vehicle\": {\n    \"make_model\": \"Year Make Model\",\n    \"license_plate\": \"License plate number\"\n  },\n  \"other_parties_involved\": [\n    {\n      \"name\": \"Full name of other party\",\n      \"phone\": \"Phone number\",\n      \"insurance\": {\n        \"provider\": \"Insurance company name\",\n        \"policy_number\": \"Policy number\"\n      }\n    }\n  ],\n  \"injuries\": [\n    {\n      \"description\": \"Description of any injuries mentioned\",\n      \"severity\": \"minor | moderate | severe\"\n    }\n  ],\n  \"police_report\": {\n    \"filed\": true | false,\n    \"report_number\": \"Police report number (if available)\",\n    \"officer_name\": \"Name of the responding officer (if available)\"\n  }\n}\n\nTRANSCRIPT:\n${transcript}]"
+`;
         const completion = await client.chat.completions.create({
           messages: [{ role: 'user', content: prompt }],
           model: 'llama3.1-8b',
@@ -270,7 +277,6 @@ export function Conversation({
         {/* Add the View Claim button */}
         <div className="flex justify-center mt-6">
           <Button
-            onClick={handleViewClaim}
             disabled={!conversationSummary}
             className="bg-[#E41B23] hover:bg-[#E41B23]/90"
           >
