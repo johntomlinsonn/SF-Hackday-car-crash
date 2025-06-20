@@ -19,26 +19,15 @@ export function Conversation({
   showHistory?: boolean;
   onStatusChange?: (status: 'idle' | 'connected' | 'disconnected' | 'error') => void;
 }) {
-  const [messages, setMessages] = useState<{ sender: 'user' | 'agent'; text: string }[]>([]);
+  const [messages, setMessages] = useState<{ sender: string; text: string }[]>([]);
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState<'idle' | 'connected' | 'disconnected' | 'error'>('idle');
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [liveUserTranscript, setLiveUserTranscript] = useState('');
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [speechEnabled, setSpeechEnabled] = useState(true);
+  const [conversationSummary, setConversationSummary] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-
-  // Claim parsing state
-  const [parsedClaim, setParsedClaim] = useState<any>(null);
-  const [parsing, setParsing] = useState(false);
-  const [parseError, setParseError] = useState<string | null>(null);
-  const router = useRouter();
-
-  useEffect(() => {
-    if (onStatusChange) {
-      onStatusChange(status);
-    }
-  }, [status, onStatusChange]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -63,7 +52,6 @@ export function Conversation({
       console.log('Full conversation details:', data);
       console.log('Transcript:', data.transcript);
       console.log('Status:', data.status);
-      return String(data.transcript);
     } catch (e) {
       console.error('Error fetching conversation details:', e);
     }
@@ -72,17 +60,15 @@ export function Conversation({
   const conversation = useConversation({
     onConnect: () => setStatus('connected'),
     onDisconnect: () => setStatus('disconnected'),
-    onMessage: (message) => {
-      if (message.sender === 'user') {
-        setMessages((prev) => [...prev, { sender: 'user', text: message.text || '' }]);
-      } else {
-        setMessages((prev) => [...prev, { sender: 'agent', text: message.text || '' }]);
-      }
+    onMessage: (props: { message: string; source: string }) => {
+      // Map "ai" to "agent" for display
+      const sender = props.source === "ai" ? "agent" : props.source;
+      setMessages((prev) => [...prev, { sender, text: props.message }]);
       setIsSpeaking(conversation.isSpeaking);
       setLiveUserTranscript('');
     },
-    onTranscription: (transcription) => {
-      setLiveUserTranscript(transcription.text || '');
+    onTranscription: (transcription: { text?: string }) => {
+      setLiveUserTranscript(transcription?.text || '');
     },
     onError: (error) => setStatus('error'),
   });
@@ -213,19 +199,7 @@ export function Conversation({
         pollForTranscript(conversationId);
       }, 2000);
     }
-  }, [status, conversationId, router]);
-
-  if (parsedClaim) {
-    return <MockClaim claimData={parsedClaim} />;
-  }
-
-  if (parsing) {
-    return <div className="text-xl text-gray-600 animate-pulse">Generating your claim summary...</div>;
-  }
-
-  if (parseError) {
-    return <div className="text-red-600">{parseError}</div>;
-  }
+  }, [status, conversationId]);
 
   return (
     <Card className="w-full max-w-4xl mx-auto mt-12 mb-8 shadow-lg border-2 border-[#E41B23]/20">
@@ -291,6 +265,16 @@ export function Conversation({
             ) : (
               <Mic className="h-10 w-10" />
             )}
+          </Button>
+        </div>
+        {/* Add the View Claim button */}
+        <div className="flex justify-center mt-6">
+          <Button
+            onClick={handleViewClaim}
+            disabled={!conversationSummary}
+            className="bg-[#E41B23] hover:bg-[#E41B23]/90"
+          >
+            View Pre-filled Claim
           </Button>
         </div>
         {loading && <p className="text-center text-gray-600 mt-4">Connecting...</p>}
