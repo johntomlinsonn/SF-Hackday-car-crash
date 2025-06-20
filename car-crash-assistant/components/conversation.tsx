@@ -6,6 +6,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Loader2, Mic, MicOff, Volume2, VolumeX } from 'lucide-react';
 import { ElevenLabsClient } from "@elevenlabs/elevenlabs-js";
+import { useRouter } from "next/navigation";
 
 export function Conversation({
   onConversationId,
@@ -14,14 +15,16 @@ export function Conversation({
   onConversationId?: (id: string | null) => void;
   showHistory?: boolean;
 }) {
-  const [messages, setMessages] = useState<{ sender: 'user' | 'agent'; text: string }[]>([]);
+  const [messages, setMessages] = useState<{ sender: string; text: string }[]>([]);
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState<'idle' | 'connected' | 'disconnected' | 'error'>('idle');
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [liveUserTranscript, setLiveUserTranscript] = useState('');
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [speechEnabled, setSpeechEnabled] = useState(true);
+  const [conversationSummary, setConversationSummary] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const router = useRouter();
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -40,6 +43,8 @@ export function Conversation({
       console.log('Full conversation details:', data);
       console.log('Transcript:', data.transcript);
       console.log('Status:', data.status);
+      // Set the conversation summary for the claim page
+      setConversationSummary(data.analysis?.transcriptSummary || null);
     } catch (e) {
       console.error('Error fetching conversation details:', e);
     }
@@ -48,17 +53,15 @@ export function Conversation({
   const conversation = useConversation({
     onConnect: () => setStatus('connected'),
     onDisconnect: () => setStatus('disconnected'),
-    onMessage: (message) => {
-      if (message.sender === 'user') {
-        setMessages((prev) => [...prev, { sender: 'user', text: message.text || '' }]);
-      } else {
-        setMessages((prev) => [...prev, { sender: 'agent', text: message.text || '' }]);
-      }
+    onMessage: (props: { message: string; source: string }) => {
+      // Map "ai" to "agent" for display
+      const sender = props.source === "ai" ? "agent" : props.source;
+      setMessages((prev) => [...prev, { sender, text: props.message }]);
       setIsSpeaking(conversation.isSpeaking);
       setLiveUserTranscript('');
     },
-    onTranscription: (transcription) => {
-      setLiveUserTranscript(transcription.text || '');
+    onTranscription: (transcription: { text?: string }) => {
+      setLiveUserTranscript(transcription?.text || '');
     },
     onError: (error) => setStatus('error'),
   });
@@ -110,6 +113,13 @@ export function Conversation({
       }, 2000);
     }
   }, [status, conversationId]);
+
+  // Handler to view the pre-filled claim page
+  const handleViewClaim = () => {
+    if (conversationSummary) {
+      router.push(`/claim?summary=${encodeURIComponent(conversationSummary)}`);
+    }
+  };
 
   return (
     <Card className="w-full max-w-4xl mx-auto mt-12 mb-8 shadow-lg border-2 border-[#E41B23]/20">
@@ -175,6 +185,16 @@ export function Conversation({
             ) : (
               <Mic className="h-10 w-10" />
             )}
+          </Button>
+        </div>
+        {/* Add the View Claim button */}
+        <div className="flex justify-center mt-6">
+          <Button
+            onClick={handleViewClaim}
+            disabled={!conversationSummary}
+            className="bg-[#E41B23] hover:bg-[#E41B23]/90"
+          >
+            View Pre-filled Claim
           </Button>
         </div>
         {loading && <p className="text-center text-gray-600 mt-4">Connecting...</p>}

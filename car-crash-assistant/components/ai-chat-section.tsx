@@ -7,8 +7,46 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Loader2 } from "lucide-react"
+import React, { useState, useRef } from "react"
 
 export default function Home() {
+  const [messages, setMessages] = useState<{ sender: "user" | "agent"; text: string }[]>([])
+  const [input, setInput] = useState("")
+  const [loading, setLoading] = useState(false)
+  const messagesEndRef = useRef<HTMLDivElement>(null)
+
+  // Scroll to bottom when messages change
+  React.useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
+  }, [messages])
+
+  // Handle sending a message
+  const handleSendMessage = async () => {
+    if (!input.trim()) return
+    setLoading(true)
+    setMessages(prev => [...prev, { sender: "user", text: input }])
+    setInput("")
+    try {
+      const res = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt: input }),
+      })
+      const data = await res.json()
+      setMessages(prev => [...prev, { sender: "agent", text: data.text }])
+    } catch (err) {
+      setMessages(prev => [...prev, { sender: "agent", text: "Sorry, something went wrong." }])
+    }
+    setLoading(false)
+  }
+
+  // Handle Enter key
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter" && !loading) {
+      handleSendMessage()
+    }
+  }
+
   return (
     <div className="flex flex-col min-h-screen bg-white">
       <Header />
